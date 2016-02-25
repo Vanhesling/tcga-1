@@ -24,21 +24,40 @@ cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC",
 exprs <- list()
 phens <- list()
 
-for (i in cancer[1]) {
-	files <- list.files(paste(exp_dir, i, sep='/'), pattern='*.txt')
+for (i in cancer[1:5]) {
+	files <- list.files(paste(exp_dir, i, sep='/'), pattern='*.data.txt')
 	x <- read.table(paste(exp_dir,i,files[1],sep='/'), header=T, row.names=1, skip=2, sep='\t')
 	y <- read.table(paste(exp_dir,i,files[1],sep='/'), header=T, row.names=1, skip=0, sep='\t')
 	colnames(x) <- colnames(y)
-	exprs[[i]] <- x
+	rm(y)
 	
-	files <- list.files(paste(phen_dir, i, sep='/'), pattern='*.txt')
+	files <- list.files(paste(phen_dir, i, sep='/'), pattern='*.picked.txt')
 	phen <- read.table(paste(phen_dir,i,files[1],sep='/'), header=F, row.names=1, skip=0, sep="\t")
 
 	#exp_ids <- tolower(apply(matrix(colnames(exprs[[1]]), ncol=1), 1, function(x) {unlist(strsplit(x, split='[.]'))[1:3]})[3,])
-	exp_ids <- tolower(apply(matrix(colnames(y), ncol=1), 1, function(x) {unlist(strsplit(x, split='[.]'))[1:3]})[3,])
-	phen_ids <- apply(matrix(t(phen)[,1], ncol=1), 1, function(x) {unlist(strsplit(x, split='[-]'))[3]})
+	exp_ids <- tolower(apply(matrix(colnames(x), ncol=1), 1, function(x) {paste(unlist(strsplit(x, split='[.]'))[1:3], collapse='-')}))
+	#phen_ids <- apply(matrix(t(phen)[,1], ncol=1), 1, function(x) {unlist(strsplit(x, split='[-]'))[3]})
+	phen_ids <- as.character(t(phen)[,1])
 
-	phens[[i]] <- t(phen)[phen_ids%in%exp_ids,]
+	# Remove entries with duplicates
+	colnames(x) <- exp_ids
+	unique_exp <- x[, !(exp_ids%in%exp_ids[duplicated(exp_ids)])]
+
+	phens[[i]] <- t(phen)[phen_ids%in%colnames(unique_exp),]
+	exprs[[i]] <- unique_exp
+	if (F) {
+	if (length(phen_ids) >= length(exp_ids)) {
+		phens[[i]] <- t(phen)[phen_ids%in%exp_ids,]
+	} else {
+		phens[[i]] <- t(phen)[exp_ids%in%phen_ids,] 
+		exprs[[i]] <- x[exp_ids%in%phen_ids] 
+	}
+	}
+
 }
 
-et <- performDE(exprs[[1]], phens[[1]])
+et_list <- list()
+for (i in cancer[1:5]) {
+	et <- performDE(exprs[[i]], phens[[i]])
+	et_list[[i]] <- et
+}
