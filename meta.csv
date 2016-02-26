@@ -1,0 +1,32 @@
+cancer,name,sample_size,nmale,nfemale,ngenes,nsiggenes,malebiased,percentmale,femalebiased,percentfemale
+ACC,Adrenocortical Carcinoma,79,31,48,16087,28,14,50,14,50
+BLCA,Breast Lobular Carcinoma,389,291,98,16504,35,21,60,14,40
+BRCA,Breast Invasive Carcinoma,977,11,966,16577,555,205,37,350,63
+CESC,Cervical Squamous Cell Carcinoma,299,0,299,16431,0,0,NaN,0,NaN
+CHOL,Cholangiocarcinoma,27,10,17,16588,14,12,86,2,14
+COAD,Colorectal Adenocarcinoma,270,144,126,16349,62,27,44,35,56
+DLBC,Diffuse Large B-cell,15,8,7,15834,16,13,81,3,19
+ESCA,Esophageal Carcinoma,172,151,21,16934,0,0,NaN,0,NaN
+GBM,Glioblastoma Multiforme,153,101,52,16712,36,18,50,18,50
+HNSC,Head/Neck Squamous Cell Carcinoma,476,355,121,16624,2949,1831,62,1118,38
+KICH,Kidney Chromophobe,41,26,15,16064,18,16,89,2,11
+KIRC,Kidney Reneal Clear Cell,460,292,168,16587,2243,1320,59,923,41
+KIRP,Kidney Renal Papillary Cell Carcinoma,257,192,65,16411,4188,2000,48,2188,52
+LAML,Acute Myeloid Lukemia,173,93,80,15594,38,20,53,18,47
+LGG,Lower Grade Glioma,501,279,222,16651,63,37,59,26,41
+LIHC,Liver Hepatocellular Carcinoma,319,220,99,16150,2426,933,38,1493,62
+LUAD,Lung Adenocarcinoma,456,213,243,16834,866,268,31,598,69
+LUSC,Lung Squaous Cell Carcinoma,450,334,116,16968,705,156,22,549,78
+OV,Ovarian,301,0,301,16891,0,0,NaN,0,NaN
+PAAD,Pancreatic Adenocarcinoma,173,95,78,17087,33,14,42,19,58
+PCPG,Pheochromocytoma and Paraganglioma,172,73,99,16356,31,18,58,13,42
+PRAD,Prostate Adenocarcinoma,444,444,0,16600,0,0,NaN,0,NaN
+READ,Rectum Adenocarcinoma,91,50,41,16438,21,14,67,7,33
+SARC,Sarcoma,253,116,137,16454,1829,742,41,1087,59
+STAD,Stomach Adenocarcinoma,41,23,18,16961,23,17,74,6,26
+TGCT,Testicular Germ Cell,129,129,0,17530,0,0,NaN,0,NaN
+THCA,Thyroid Cancer,434,114,320,16291,98,48,49,50,51
+THYM,Thymoma,118,63,55,16603,37,19,51,18,49
+UCEC,Uterine Corpus Endometrial Carcinoma,176,0,176,16750,0,0,NaN,0,NaN
+UCS,Uterine Carcinosarcoma,57,0,57,17143,0,0,NaN,0,NaN
+UVM,Uveal Melanoma,80,45,35,15551,22,13,59,9,41
