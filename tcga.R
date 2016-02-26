@@ -45,7 +45,7 @@ for (i in cancer) {
 	unique_exp <- x[, !(exp_ids%in%exp_ids[duplicated(exp_ids)])]
 
 	phens[[i]] <- t(phen)[phen[1,]%in%colnames(unique_exp),]
-	exprs[[i]] <- unique_exp
+	exprs[[i]] <- unique_exp[, colnames(unique_exp)%in%phens[[i]][,1]]
 	if (F) {
 	if (length(phen_ids) >= length(exp_ids)) {
 		phens[[i]] <- t(phen)[phen[1,]%in%exp_ids,]
@@ -63,5 +63,5 @@ for (i in cancer) {
 	et_list[[i]] <- et
 }
 
-results <- lapply(et_list, topTable, number=Inf)
-save(results, file='/home/t.cri.cczysz/tcga/results.Robj')
+#results <- lapply(et_list, topTable, number=Inf)
+save(et_list, file='/home/t.cri.cczysz/tcga/results.Robj')
