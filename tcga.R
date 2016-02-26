@@ -2,7 +2,8 @@ performDE <- function(expr, phen) {
 	log2expr <- log2(expr+0.5)	
 	lowexpr <- (rowMeans(log2expr) < 1)
 	log2expr <- log2expr[!lowexpr,]
-	sex <- as.numeric(phens[[1]][,'gender']=='male')
+	sex <- as.numeric(phen[,'gender']=='male')
+	print(as.character(sex))
 	design <- model.matrix(~sex)
 	y <- DGEList(expr, remove.zeros=T)
 	#y <- calcNormFactors(y)
@@ -19,12 +20,12 @@ library(limma)
 exp_dir <- "/home/t.cri.cczysz/tcga/expression"
 phen_dir <- "/home/t.cri.cczysz/tcga/phen"
 
-cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC","KICH","KIRC","KIRP","LAML","LGG","LIHC","LUAD","LUSC","MESO","OV","PAAD","PCPG","PRAD","READ","SARC","SKCM","STAD","TGCT","THCA","THYM","UCEC","UCS","UVM")
+cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC","KICH","KIRC","KIRP","LAML","LGG","LIHC","LUAD","LUSC","OV","PAAD","PCPG","PRAD","READ","SARC","STAD","TGCT","THCA","THYM","UCEC","UCS","UVM")
 
 exprs <- list()
 phens <- list()
 
-for (i in cancer[1:5]) {
+for (i in cancer) {
 	files <- list.files(paste(exp_dir, i, sep='/'), pattern='*.data.txt')
 	x <- read.table(paste(exp_dir,i,files[1],sep='/'), header=T, row.names=1, skip=2, sep='\t')
 	y <- read.table(paste(exp_dir,i,files[1],sep='/'), header=T, row.names=1, skip=0, sep='\t')
@@ -43,11 +44,11 @@ for (i in cancer[1:5]) {
 	colnames(x) <- exp_ids
 	unique_exp <- x[, !(exp_ids%in%exp_ids[duplicated(exp_ids)])]
 
-	phens[[i]] <- t(phen)[phen_ids%in%colnames(unique_exp),]
+	phens[[i]] <- t(phen)[phen[1,]%in%colnames(unique_exp),]
 	exprs[[i]] <- unique_exp
 	if (F) {
 	if (length(phen_ids) >= length(exp_ids)) {
-		phens[[i]] <- t(phen)[phen_ids%in%exp_ids,]
+		phens[[i]] <- t(phen)[phen[1,]%in%exp_ids,]
 	} else {
 		phens[[i]] <- t(phen)[exp_ids%in%phen_ids,] 
 		exprs[[i]] <- x[exp_ids%in%phen_ids] 
@@ -57,7 +58,10 @@ for (i in cancer[1:5]) {
 }
 
 et_list <- list()
-for (i in cancer[1:5]) {
+for (i in cancer) {
 	et <- performDE(exprs[[i]], phens[[i]])
 	et_list[[i]] <- et
 }
+
+results <- lapply(et_list, topTable, number=Inf)
+save(results, file='/home/t.cri.cczysz/tcga/results.Robj')
