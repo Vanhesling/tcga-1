@@ -308,3 +308,8 @@ Expression and phenotype files were downloaded and sorted in the working directo
 	├── sub_tcga.sh
 	├── tcga_dl.sh
 	└── tcga.R
+
+The expression txt files contain two headers, followed by normalized RPKM values for genes (rows) by individuals (columns)
+The clinical txt files contain various phenotype info (rows) by individuals (columns). The first row corresponds to truncated individual ids of the expression data.
+
+The `tcga.R` script processes the expression and phenotype files, convertng the expression individual ids
