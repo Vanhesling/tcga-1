@@ -107,52 +107,58 @@ if (!file.exists('/home/t.cri.cczysz/tcga/results.Robj')) {
 
 ensembl = useMart("ENSEMBL_MART_ENSEMBL",dataset="hsapiens_gene_ensembl", host="www.ensembl.org")
 meta_list <- c('cancer', 'name', 'sample_size', 'nmale', 'nfemale', 'ngenes', 'nsiggenes', 'malebiased', 'percentmale', 'femalebiased', 'percentfemale')
-out_list <- list()
-for (i in seq(length(et_list))) {
-	cancer_type <- names(et_list)[i]
-	nmale <- sum(et_list[[i]]$design[,2])
-	nfemale <- sum(!et_list[[i]]$design[,2])
+if (!file.exists('/home/t.cri.cczysz/tcga/out.Robj')) {
+	out_list <- list()
+	for (i in seq(length(et_list))) {
+		cancer_type <- names(et_list)[i]
+		nmale <- sum(et_list[[i]]$design[,2])
+		nfemale <- sum(!et_list[[i]]$design[,2])
 
-	all_genes <- topTable(et_list[[i]], number=Inf)
-	sig_genes <- topTable(et_list[[i]], number=Inf, p.value=0.05)
+		all_genes <- topTable(et_list[[i]], number=Inf)
+		sig_genes <- topTable(et_list[[i]], number=Inf, p.value=0.05)
 
-	ngenes <- nrow(all_genes)	
-	nsig <- nrow(sig_genes)
-	male_bias <- sum(sig_genes$logFC > 0)
-	female_bias <- sum(sig_genes$logFC < 0)
+		ngenes <- nrow(all_genes)	
+		nsig <- nrow(sig_genes)
+		male_bias <- sum(sig_genes$logFC > 0)
+		female_bias <- sum(sig_genes$logFC < 0)
 
-	meta_list <- rbind(meta_list, c(cancer_type, full_names[i], nmale+nfemale, nmale, nfemale, ngenes, nsig, male_bias, signif(100 * male_bias/nsig, 2), female_bias, signif(100*female_bias/nsig, 2)))
+		meta_list <- rbind(meta_list, c(cancer_type, full_names[i], nmale+nfemale, nmale, nfemale, ngenes, nsig, male_bias, signif(100 * male_bias/nsig, 2), female_bias, signif(100*female_bias/nsig, 2)))
 
-	sig_symbols <- apply(matrix(rownames(sig_genes), ncol=1), 1, function(x) {unlist(strsplit(x, split='[|]'))[1]})
-	sig_entrez <- apply(matrix(rownames(sig_genes), ncol=1), 1, function(x) {unlist(strsplit(x, split='[|]'))[2]})
+		sig_symbols <- apply(matrix(rownames(sig_genes), ncol=1), 1, function(x) {unlist(strsplit(x, split='[|]'))[1]})
+		sig_entrez <- apply(matrix(rownames(sig_genes), ncol=1), 1, function(x) {unlist(strsplit(x, split='[|]'))[2]})
 
-	if (length(sig_symbols)==0) {
-		#out_list[[cancer_type]] <- NA
-		next
+		if (length(sig_symbols)==0) {
+			#out_list[[cancer_type]] <- NA
+			next
+		}
+
+		biomart.results=getBM(ensembl, attributes=c("ensembl_gene_id","hgnc_symbol","entrezgene", "chromosome_name"),filters="entrezgene",values=sig_entrez)
+
+		# Reorder biomart results by entrez id
+		x <- biomart.results[match(sig_entrez, biomart.results$entrezgene),]
+		out <- cbind(x, logFC = signif(sig_genes$logFC,2), p.val = signif(sig_genes$P.Value,2), q.value = signif(sig_genes$adj.P.Val,2))
+		rownames(out) <- rownames(sig_genes)
+		out_list[[cancer_type]] <- out
+		save(out_list, file='/home/t.cri.cczysz/tcga/out.Robj')
 	}
-
-	biomart.results=getBM(ensembl, attributes=c("ensembl_gene_id","hgnc_symbol","entrezgene", "chromosome_name"),filters="entrezgene",values=sig_entrez)
-
-	# Reorder biomart results by entrez id
-	x <- biomart.results[match(sig_entrez, biomart.results$entrezgene),]
-	out <- cbind(x, logFC = signif(sig_genes$logFC,2), p.val = signif(sig_genes$P.Value,2), q.value = signif(sig_genes$adj.P.Val,2))
-	rownames(out) <- rownames(sig_genes)
-	out_list[[cancer_type]] <- out
-	save(out_list, file='/home/t.cri.cczysz/tcga/out.Robj')
-}
+} else {load(file='/home/t.cri.cczysz/tcga/out.Robj')}
 	
 write.table(meta_list, file='meta.csv', sep=',', row.names=F, col.names=F, quote=F)
 
 plot.data <- data.frame(meta_list[-1,-1])
 colnames(plot.data) <- meta_list[1,][-1]
 rownames(plot.data) <- meta_list[,1][-1]
-g <- ggplot(data=plot.data, aes(x=rownames(plot.data), y=as.numeric(nsiggenes)))
+
 pdf(file='sig_genes.pdf', width=11, height=8)
-g + geom_bar(stat='identity') + theme(axis.text.x = element_text(angle = 90, hjust = 1))
-g <- ggplot(data=plot.data, aes(x=rownames(plot.data), y=log10(as.numeric(nsiggenes))))
-g + geom_bar(stat='identity') + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+	g <- ggplot(data=plot.data, aes(x=rownames(plot.data), y=as.numeric(nsiggenes)))
+	g + geom_bar(stat='identity') + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+	g <- ggplot(data=plot.data, aes(x=rownames(plot.data), y=log10(as.numeric(nsiggenes))))
+	g + geom_bar(stat='identity') + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 dev.off()
+
+if (F) {
 for (cancer_type in names(out_list)) {
 	f.out <- paste(cancer_type, 'results.csv', sep='.')
 	write.csv(out_list[[cancer_type]], file=f.out, sep=',', row.names=T, col.names=T, quote=F)
+}
 }
