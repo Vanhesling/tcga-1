@@ -46,6 +46,7 @@ library(edgeR)
 library(limma)
 library(biomaRt)
 library(ggplot2)
+library(goseq)
 
 exp_dir <- "/home/t.cri.cczysz/tcga/expression"
 phen_dir <- "/home/t.cri.cczysz/tcga/phen"
@@ -103,7 +104,30 @@ if (!file.exists('/home/t.cri.cczysz/tcga/results.Robj')) {
 
 	#results <- lapply(et_list, topTable, number=Inf)
 	save(et_list, file='/home/t.cri.cczysz/tcga/results.Robj') 
-	} else {load('/home/t.cri.cczysz/tcga/results.Robj')}
+} else {load('/home/t.cri.cczysz/tcga/results.Robj')}
+
+# et_list[[cancer]] gives lmFit objects from lm of gene ~ sex test
+
+# Perform GO enrichment analysis
+go.data <- list()
+if (!file.exists('go.Robj')) {
+	for (i in names(et_list)) {
+		tmp <- et_list[[i]]
+		ttable <- topTable(tmp, number=Inf)
+		sig <- topTable(tmp, number=Inf, p.value=0.05)
+		all_genes <- rownames(topTable(tmp, number=Inf))
+		go_in <- as.numeric(all_genes%in%rownames(sig))
+		all_genes <- apply(matrix(all_genes, ncol=1), 1, function (x) {unlist(strsplit(x, '[|]'))[2]})
+		names(go_in) <- all_genes
+		pwf <- nullp(go_in, "hg19", "refGene")
+		GO.wall <- goseq(pwf, "hg19", "refGene", method='Sampling', repcnt=10000)
+		GO.wall$q.value <- p.adjust(GO.wall$over_represented_pvalue,method="fdr")
+		go.data[[i]] <- GO.wall
+		#GO.enriched <- subset(GO.wall, q.value < 0.1)
+	}
+	save(go.data, file='go.Robj') 
+	} else {load(file='go.Robj')}
+q()
 
 ensembl = useMart("ENSEMBL_MART_ENSEMBL",dataset="hsapiens_gene_ensembl", host="www.ensembl.org")
 meta_list <- c('cancer', 'name', 'sample_size', 'nmale', 'nfemale', 'ngenes', 'nsiggenes', 'malebiased', 'percentmale', 'femalebiased', 'percentfemale')
