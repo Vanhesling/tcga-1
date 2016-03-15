@@ -1,6 +1,8 @@
-importData <- function(cancer, exp_dir = exp_dir, phen_dir = phen_dir) {
+importData <- function(i) {
 
-	i <- cancer
+	exp_dir <- "/home/t.cri.cczysz/tcga/expression"
+	phen_dir <- "/home/t.cri.cczysz/tcga/phen"
+	#i <- cancer
 	files <- list.files(paste(exp_dir, i, sep='/'), pattern='*.data.txt')
 
 	# Ignore first two header rows and import expression
@@ -21,24 +23,61 @@ importData <- function(cancer, exp_dir = exp_dir, phen_dir = phen_dir) {
 	unique_exp <- x[, !(exp_ids%in%exp_ids[duplicated(exp_ids)])]
 
 	phens <- t(phen)[phen[1,]%in%colnames(unique_exp),]
-	exprs <- unique_exp[, colnames(unique_exp)%in%phens[[i]][,1]]
+	exprs <- unique_exp[, colnames(unique_exp)%in%phens[,1]]
 	return(list(phens, exprs))
 
 }
 
-performDE <- function(expr, phen) {
-	log2expr <- log2(expr+0.5)	
-	lowexpr <- (rowMeans(log2expr) < 1)
-	log2expr <- log2expr[!lowexpr,]
+performGO <- function(et_list) {
+	go.data <- list()
+	for (i in names(et_list)) {
+		tmp <- et_list[[i]]
+		ttable <- topTable(tmp, number=Inf)
+		sig <- topTable(tmp, number=Inf, p.value=0.05)
+		all_genes <- rownames(topTable(tmp, number=Inf))
+		go_in <- as.numeric(all_genes%in%rownames(sig))
+		all_genes <- apply(matrix(all_genes, ncol=1), 1, function (x) {unlist(strsplit(x, '[|]'))[2]})
+		names(go_in) <- all_genes
+		pwf <- nullp(go_in, "hg19", "refGene")
+		GO.wall <- goseq(pwf, "hg19", "refGene", method='Sampling', repcnt=10000)
+		GO.wall$q.value <- p.adjust(GO.wall$over_represented_pvalue,method="fdr")
+		go.data[[i]] <- GO.wall
+	}
+	return(go.data)
+}
+
+performDE <- function(expr, phen, filter=T, sv=T) {
+
+	# Filtering:
+	## RPKM >0.01 in 5% of samples
+
+	expr <- as.matrix(expr)
+	nsamples <- ncol(expr)
+	#log2expr <- log2(expr+1)	
+
+	# Filter lowly expressed genes
+	lowexp <- expr <= 0.1	
+	lowexpr <- rowSums(lowexp) > (0.95 * nsamples)
+	log2expr <- log2(expr[!lowexpr,]+1)
+
 	sex <- as.numeric(phen[,'gender']=='male')
-	print(as.character(sex))
-	design <- model.matrix(~sex)
-	y <- DGEList(expr, remove.zeros=T)
-	#y <- calcNormFactors(y)
+	if (sv) {
+		mod = model.matrix(~sex)
+		mod0 = model.matrix(~rep(1, nsamples))
+
+		svobj <- sva(log2expr+0.01, mod, mod0)
+		modSv <- cbind(mod, svobj$sv)
+
+		design <- modSV
+	} else {
+		design <- model.matrix(~sex)
+	}
+
+	y <- DGEList(log2expr, remove.zeros=T)
 	v <- voom(y, design)
-	#et <- exactTest(y, dispersion=0.4^2)
-	fit <- lmFit(log2expr, design)
+	fit <- lmFit(v, design)
 	fit <- eBayes(fit)
+	fit$nsamples <- ncol(log2expr)
 	return(fit)
 }
 
@@ -47,12 +86,15 @@ library(limma)
 library(biomaRt)
 library(ggplot2)
 library(goseq)
+library(sva)
+
+setwd('/home/t.cri.cczysz/tcga/')
 
 exp_dir <- "/home/t.cri.cczysz/tcga/expression"
 phen_dir <- "/home/t.cri.cczysz/tcga/phen"
 
-
-cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC","KICH","KIRC","KIRP","LAML","LGG","LIHC","LUAD","LUSC","OV","PAAD","PCPG","PRAD","READ","SARC","STAD","TGCT","THCA","THYM","UCEC","UCS","UVM")
+cancer <- c("ACC")
+#cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC","KICH","KIRC","KIRP","LAML","LGG","LIHC","LUAD","LUSC","OV","PAAD","PCPG","PRAD","READ","SARC","STAD","TGCT","THCA","THYM","UCEC","UCS","UVM")
 
 full_names <- c('Adrenocortical Carcinoma', 
 	'Breast Lobular Carcinoma',
@@ -92,46 +134,38 @@ if (!file.exists('/home/t.cri.cczysz/tcga/results.Robj')) {
 
 	for (i in cancer) {
 		out <- importData(i)
-		exprs[[i]] <- out[[2]]
 		phens[[i]] <- out[[1]]
+		exprs[[i]] <- out[[2]]
 	}
 
 	et_list <- list()
 	for (i in cancer) {
-		et <- performDE(exprs[[i]], phens[[i]])
+		et <- performDE(exprs[[i]], phens[[i]], T, T)
 		et_list[[i]] <- et
 	}
 
 	#results <- lapply(et_list, topTable, number=Inf)
 	save(et_list, file='/home/t.cri.cczysz/tcga/results.Robj') 
+
 } else {load('/home/t.cri.cczysz/tcga/results.Robj')}
 
 # et_list[[cancer]] gives lmFit objects from lm of gene ~ sex test
 
 # Perform GO enrichment analysis
-go.data <- list()
-if (!file.exists('go.Robj')) {
-	for (i in names(et_list)) {
-		tmp <- et_list[[i]]
-		ttable <- topTable(tmp, number=Inf)
-		sig <- topTable(tmp, number=Inf, p.value=0.05)
-		all_genes <- rownames(topTable(tmp, number=Inf))
-		go_in <- as.numeric(all_genes%in%rownames(sig))
-		all_genes <- apply(matrix(all_genes, ncol=1), 1, function (x) {unlist(strsplit(x, '[|]'))[2]})
-		names(go_in) <- all_genes
-		pwf <- nullp(go_in, "hg19", "refGene")
-		GO.wall <- goseq(pwf, "hg19", "refGene", method='Sampling', repcnt=10000)
-		GO.wall$q.value <- p.adjust(GO.wall$over_represented_pvalue,method="fdr")
-		go.data[[i]] <- GO.wall
-		#GO.enriched <- subset(GO.wall, q.value < 0.1)
-	}
-	save(go.data, file='go.Robj') 
-	} else {load(file='go.Robj')}
-q()
+#go.data <- list()
+if (!(file.exists('/home/t.cri.cczysz/go.Robj')) | !(file.exists('/home/t.cri.cczysz/go_sig.Robj'))) {
+	go.data <- performGO(et_list)
+	go.sig.data <- lapply(go.data, function(x) {subset(x,q.value<0.25)})
+
+	save(go.data, file='/home/t.cri.cczysz/go.Robj') 
+	save(go.sig.data, file='/home/t.cri.cczysz/go_sig.Robj') 
+} 
+#else {load(file='/home/t.cri.cczysz/go.Robj')}
 
 ensembl = useMart("ENSEMBL_MART_ENSEMBL",dataset="hsapiens_gene_ensembl", host="www.ensembl.org")
-meta_list <- c('cancer', 'name', 'sample_size', 'nmale', 'nfemale', 'ngenes', 'nsiggenes', 'malebiased', 'percentmale', 'femalebiased', 'percentfemale')
-if (!file.exists('/home/t.cri.cczysz/tcga/out.Robj')) {
+cancer_summaries <- c('cancer', 'name', 'sample_size', 'nmale', 'nfemale', 'percentfemale', 'ngenes', 'nsiggenes', 'malebiased', 'percentmale', 'femalebiased', 'percentfemale')
+
+if (!file.exists('/home/t.cri.cczysz/tcga/de_results.Robj')) {
 	out_list <- list()
 	for (i in seq(length(et_list))) {
 		cancer_type <- names(et_list)[i]
@@ -146,7 +180,7 @@ if (!file.exists('/home/t.cri.cczysz/tcga/out.Robj')) {
 		male_bias <- sum(sig_genes$logFC > 0)
 		female_bias <- sum(sig_genes$logFC < 0)
 
-		meta_list <- rbind(meta_list, c(cancer_type, full_names[i], nmale+nfemale, nmale, nfemale, ngenes, nsig, male_bias, signif(100 * male_bias/nsig, 2), female_bias, signif(100*female_bias/nsig, 2)))
+		cancer_summaries <- rbind(cancer_summaries, c(cancer_type, full_names[i], nmale+nfemale, nmale, nfemale, nfemale / (nmale + nfemale), ngenes, nsig, male_bias, signif(100 * male_bias/nsig, 2), female_bias, signif(100*female_bias/nsig, 2)))
 
 		sig_symbols <- apply(matrix(rownames(sig_genes), ncol=1), 1, function(x) {unlist(strsplit(x, split='[|]'))[1]})
 		sig_entrez <- apply(matrix(rownames(sig_genes), ncol=1), 1, function(x) {unlist(strsplit(x, split='[|]'))[2]})
@@ -163,11 +197,11 @@ if (!file.exists('/home/t.cri.cczysz/tcga/out.Robj')) {
 		out <- cbind(x, logFC = signif(sig_genes$logFC,2), p.val = signif(sig_genes$P.Value,2), q.value = signif(sig_genes$adj.P.Val,2))
 		rownames(out) <- rownames(sig_genes)
 		out_list[[cancer_type]] <- out
-		save(out_list, file='/home/t.cri.cczysz/tcga/out.Robj')
-	}
-} else {load(file='/home/t.cri.cczysz/tcga/out.Robj')}
+	}       
+	save(out_list, file='/home/t.cri.cczysz/tcga/de_results.Robj')
+} else {load(file='/home/t.cri.cczysz/tcga/de_results.Robj')}
 	
-write.table(meta_list, file='meta.csv', sep=',', row.names=F, col.names=F, quote=F)
+write.table(cancer_summaries, file='cancer_summaries.csv', sep=',', row.names=F, col.names=F, quote=F)
 
 plot.data <- data.frame(meta_list[-1,-1])
 colnames(plot.data) <- meta_list[1,][-1]
