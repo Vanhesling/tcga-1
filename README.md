@@ -34,7 +34,7 @@ These scripts provide a cursory overview of the sex-specific expression of genes
 * UCS
 * UVM
 
-Note: Some cancer types removed from analysis (MESO and SKCM) due to failure to download
+Note: MESO and SKCM cancer types removed from analysis to failure to download
 
 # Workflow
 
@@ -312,4 +312,17 @@ Expression and phenotype files were downloaded and sorted in the working directo
 The expression txt files contain two headers, followed by normalized RPKM values for genes (rows) by individuals (columns)
 The clinical txt files contain various phenotype info (rows) by individuals (columns). The first row corresponds to truncated individual ids of the expression data.
 
-The `tcga.R` script processes the expression and phenotype files, convertng the expression individual ids
+The `tcga.R` script processes the expression and phenotype files, convertng the expression individual ids into the same format found in the phenotype files. 
+
+The expression data are provided as non-transformed RPKM values. 
+For each cancer type, genes with 0 RPKM in all individuals were filtered. Then, genes with < 0.1 RPKM in 95% of samples were removed. The resulting matrix was then used for the sex-biased differential expression step:
+
+a) y_g = \beta0 + \beta1 x sex
+
+b) y_g = \beta0 + \beta1 x sex + SVs
+
+For equation b, surrogate variables were estimated from the data after controlling for the effect of sex.
+
+For both linear models, significance was defined at FDR < 5%. 
+
+The GOSeq package was used to determine enrichment of sex-biased genes in various biological categories. This method requires a named boolean vector identifying genes significantly differentially expressed. It then generates a null expectation of enrichment based on gene length and tests enrichment of GO categories based on weighting by this.
