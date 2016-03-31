@@ -241,9 +241,9 @@ if (!file.exists(summary_outfile)) {
 	
 write.table(cancer_summaries, file='cancer_summaries.csv', sep=',', row.names=F, col.names=F, quote=F)
 
-plot.data <- data.frame(meta_list[-1,-1])
-colnames(plot.data) <- meta_list[1,][-1]
-rownames(plot.data) <- meta_list[,1][-1]
+#plot.data <- data.frame(meta_list[-1,-1])
+#colnames(plot.data) <- meta_list[1,][-1]
+#rownames(plot.data) <- meta_list[,1][-1]
 
 pdf(file='sig_genes.pdf', width=11, height=8)
 	g <- ggplot(data=plot.data, aes(x=rownames(plot.data), y=as.numeric(nsiggenes)))
