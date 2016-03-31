@@ -24,7 +24,9 @@ importData <- function(i) {
 
 	phens <- t(phen)[phen[1,]%in%colnames(unique_exp),]
 	exprs <- unique_exp[, colnames(unique_exp)%in%phens[,1]]
-	return(list(phens, exprs))
+	fit <- performDE(exprs, phens)
+	#return(list(phens, exprs))
+	return(fit)
 
 }
 
@@ -46,7 +48,7 @@ performGO <- function(et_list) {
 	return(go.data)
 }
 
-performDE <- function(expr, phen, filter=T, sv=T) {
+performDE <- function(expr, phen, filter=T, sv=F) {
 
 	# Filtering:
 	## RPKM >0.01 in 5% of samples
@@ -141,13 +143,27 @@ full_names <- c('Adrenocortical Carcinoma',
 	'Uveal Melanoma'
 )
 
-de_outfile <- '/home/t.cri.cczysz/tcga/de_results_sva.Robj'
+de_outfile <- '/home/t.cri.cczysz/tcga/de_results.Robj'
 #de_outfile <- '/home/t.cri.cczysz/tcga/de_results_sva.Robj'
 
 if (!file.exists(de_outfile)) {
-	exprs <- list()
-	phens <- list()
+	#exprs <- list()
+	#phens <- list()
 
+	#out <- lapply(cancer, importData)
+	et_list <- lapply(cancer, importData)
+	names(et_list) <- cancer
+	#names(out) <- cancer
+
+	#exprs <- lapply(out, function(x) { return(x[[2]]) })
+	#names(exprs) <- cancer
+	#phens <- lapply(out, function(x) { return(x[[1]]) })
+	#names(phens) <- cancer
+	#rm(out)
+
+	#et_list <- lapply(cancer, function(x, exprs, phens) {performDE(exprs[[x]], phens[[x]], T, F)})
+	#names(et_list) <- cancer
+	if (F) {
 	for (i in cancer) {
 		out <- importData(i)
 		phens[[i]] <- out[[1]]
@@ -156,8 +172,9 @@ if (!file.exists(de_outfile)) {
 
 	et_list <- list()
 	for (i in cancer) {
-		et <- performDE(exprs[[i]], phens[[i]], T, T)
+		et <- performDE(exprs[[i]], phens[[i]], T, F)
 		et_list[[i]] <- et
+	}
 	}
 
 	#results <- lapply(et_list, topTable, number=Inf)
@@ -170,7 +187,7 @@ if (!file.exists(de_outfile)) {
 # Perform GO enrichment analysis
 #go.data <- list()
 
-go_outfile <- '/home/t.cri.cczysz/tcga/go_sva.Robj'
+go_outfile <- '/home/t.cri.cczysz/tcga/go.Robj'
 #if (!(file.exists(go_outfile)) | !(file.exists('/home/t.cri.cczysz/go_sig.Robj'))) {
 if (!file.exists(go_outfile)) { 
 	go.data <- performGO(et_list)
@@ -183,9 +200,9 @@ if (!file.exists(go_outfile)) {
 ensembl = useMart("ENSEMBL_MART_ENSEMBL",dataset="hsapiens_gene_ensembl", host="www.ensembl.org")
 cancer_summaries <- c('cancer', 'name', 'sample_size', 'nmale', 'nfemale', 'percentfemale', 'nsva','ngenes', 'nsiggenes', 'malebiased', 'percentmale', 'femalebiased', 'percentfemale')
 
-summary_outfile = '/home/t.cri.cczysz/tcga/de_summary_sva.Robj'
+summary_outfile = '/home/t.cri.cczysz/tcga/de_summary.Robj'
 
-if (file.exists(summary_outfile)) {
+if (!file.exists(summary_outfile)) {
 	out_list <- list()
 	for (i in seq(length(et_list))) {
 		cancer_type <- names(et_list)[i]
@@ -222,7 +239,7 @@ if (file.exists(summary_outfile)) {
 	save(out_list, file=summary_outfile)
 } else {load(file=summary_outfile)}
 	
-write.table(cancer_summaries, file='cancer_summaries_sva.csv', sep=',', row.names=F, col.names=F, quote=F)
+write.table(cancer_summaries, file='cancer_summaries.csv', sep=',', row.names=F, col.names=F, quote=F)
 
 plot.data <- data.frame(meta_list[-1,-1])
 colnames(plot.data) <- meta_list[1,][-1]
@@ -235,7 +252,7 @@ pdf(file='sig_genes.pdf', width=11, height=8)
 	g + geom_bar(stat='identity') + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 dev.off()
 
-if (F) {
+if (T) {
 for (cancer_type in names(out_list)) {
 	f.out <- paste(cancer_type, 'results.csv', sep='.')
 	write.csv(out_list[[cancer_type]], file=f.out, sep=',', row.names=T, col.names=T, quote=F)
