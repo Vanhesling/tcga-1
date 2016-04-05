@@ -41,7 +41,7 @@ performGO <- function(et_list) {
 		all_genes <- apply(matrix(all_genes, ncol=1), 1, function (x) {unlist(strsplit(x, '[|]'))[2]})
 		names(go_in) <- all_genes
 		pwf <- nullp(go_in, "hg19", "refGene")
-		GO.wall <- goseq(pwf, "hg19", "refGene", method='Sampling', repcnt=10000)
+		GO.wall <- goseq(pwf, "hg19", "refGene", method='Sampling', repcnt=2500)
 		GO.wall$q.value <- p.adjust(GO.wall$over_represented_pvalue,method="fdr")
 		go.data[[i]] <- GO.wall
 	}
@@ -252,7 +252,7 @@ pdf(file='sig_genes.pdf', width=11, height=8)
 	g + geom_bar(stat='identity') + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 dev.off()
 
-if (T) {
+if (F) {
 for (cancer_type in names(out_list)) {
 	f.out <- paste(cancer_type, 'results.csv', sep='.')
 	write.csv(out_list[[cancer_type]], file=f.out, sep=',', row.names=T, col.names=T, quote=F)
