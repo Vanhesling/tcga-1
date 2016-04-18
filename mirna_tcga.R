@@ -42,13 +42,17 @@ performDE <- function(expr, phen) {
 	use <- (rs > 10)
 	expr <- expr[use,]
 
-	condition <- as.factor(phen$Sex)
-	cds <- newCountDataSet(expr, condition)	
-	cds <- estimateSizeFactors(cds)
-
-	cds <- estimateDispersions(cds, method='blind', sharingMode='fit-only')
-	res <- nbinomTest(cds, 'male', 'female')
+	dds <- DESeqDataSetFromMatrix(countData = expr, colData = phen, design = ~ Sex)
+	dds <- DESeq(dds)
+	res <- results(dds)
 	return(res)
+	#condition <- as.factor(phen$Sex)
+	#cds <- newCountDataSet(expr, condition)	
+	#cds <- estimateSizeFactors(cds)
+
+	#cds <- estimateDispersions(cds, method='blind', sharingMode='fit-only')
+	#res <- nbinomTest(cds, 'male', 'female')
+	#return(res)
 if (F) {
 	# Filtering:
 	## RPKM >0.01 in 5% of samples
@@ -114,21 +118,26 @@ performGO <- function(et_list) {
 	return(go.data)
 }
 
-library(edgeR)
+if (!require(DESeq2)) {
+	library(BiocInstaller)
+	biocLite('DESeq2')
+	library(DESeq2)
+}
+#library(edgeR)
 # library(limma)
-library(DESeq)
+library(DESeq2)
 library(biomaRt)
 library(ggplot2)
-library(goseq)
-library(sva)
+#library(goseq)
+#library(sva)
 
 setwd('/home/t.cri.cczysz/tcga/')
 
 exp_dir <- "/home/t.cri.cczysz/tcga/mirna_expression"
 phen_dir <- "/home/t.cri.cczysz/tcga/phen"
 
-cancer <- c("ACC")
-#cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC","KICH","KIRC","KIRP","LGG","LIHC","LUAD","LUSC","OV","PAAD","PCPG","PRAD","READ","SARC","SKCM","STAD","TGCT","THCA","THYM","UCEC","UCS","UVM")
+#cancer <- c("ACC")
+cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC","KICH","KIRC","KIRP","LGG","LIHC","LUAD","LUSC","OV","PAAD","PCPG","PRAD","READ","SARC","SKCM","STAD","TGCT","THCA","THYM","UCEC","UCS","UVM")
 
 full_names <- c('Adrenocortical Carcinoma', 
 	'Breast Lobular Carcinoma',
@@ -174,7 +183,6 @@ if (!file.exists(de_outfile)) {
 
 	#out <- lapply(cancer, importData)
 	et_list <- lapply(cancer, importData)
-	q()
 	#names(et_list) <- cancer
 	#names(out) <- cancer
 
@@ -209,6 +217,7 @@ if (!file.exists(de_outfile)) {
 
 # Perform GO enrichment analysis
 #go.data <- list()
+q('no')
 
 ensembl = useMart("ENSEMBL_MART_ENSEMBL",dataset="hsapiens_gene_ensembl", host="www.ensembl.org")
 cancer_summaries <- c('cancer', 'name', 'sample_size', 'nmale', 'nfemale', 'percentfemale', 'nsva','ngenes', 'nsiggenes', 'malebiased', 'percentmale', 'femalebiased', 'percentfemale')
