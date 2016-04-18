@@ -17,46 +17,44 @@ importData <- function(i) {
 	colnames(rpm) <- y
 	counts <- data.frame(x[, seq(1, ncol(x), 3)])
 	colnames(counts) <- y
+
 	files <- list.files(paste(phen_dir, i, sep='/'), pattern='*.picked.txt')
 	phen <- read.table(paste(phen_dir,i,files[1],sep='/'), header=F, row.names=1, skip=0, sep="\t")
 	exp_ids <- tolower(apply(matrix(colnames(counts), ncol=1), 1, function(x) {paste(unlist(strsplit(x, split='[-]'))[1:3], collapse='-')}))
-	phen_ids <- as.character(t(phen)[,1])
 	colnames(counts) <- exp_ids
+	
+	phen_ids <- as.character(t(phen)[,1])
 	unique_exp <- counts[, !(exp_ids%in%exp_ids[duplicated(exp_ids)])]
 
 	phens <- t(phen)[phen[1,]%in%colnames(unique_exp),]
 	exprs <- unique_exp[, colnames(unique_exp)%in%phens[,1]]
-	fit <- performDE(exprs, phens)
-	#return(list(phens, exprs))
+
+	phen <- data.frame(row.names = phens[,1], Sex = phens[,'gender'])
+	#return(list(phen, exprs))
+	fit <- performDE(exprs, phen)
 	return(fit)
 
 }
 
-performGO <- function(et_list) {
-	go.data <- list()
-	for (i in names(et_list)) {
-		tmp <- et_list[[i]]
-		ttable <- topTable(tmp, number=Inf)
-		sig <- topTable(tmp, number=Inf, p.value=0.05)
-		all_genes <- rownames(topTable(tmp, number=Inf))
-		go_in <- as.numeric(all_genes%in%rownames(sig))
-		all_genes <- apply(matrix(all_genes, ncol=1), 1, function (x) {unlist(strsplit(x, '[|]'))[2]})
-		names(go_in) <- all_genes
-		pwf <- nullp(go_in, "hg19", "refGene")
-		GO.wall <- goseq(pwf, "hg19", "refGene", method='Sampling', repcnt=2500)
-		GO.wall$q.value <- p.adjust(GO.wall$over_represented_pvalue,method="fdr")
-		go.data[[i]] <- GO.wall
-	}
-	return(go.data)
-}
+performDE <- function(expr, phen) {
 
-performDE <- function(expr, phen, filter=T, sv=F) {
+	rs <- rowSums(expr)
+	use <- (rs > 10)
+	expr <- expr[use,]
 
+	condition <- as.factor(phen$Sex)
+	cds <- newCountDataSet(expr, condition)	
+	cds <- estimateSizeFactors(cds)
+
+	cds <- estimateDispersions(cds, method='blind', sharingMode='fit-only')
+	res <- nbinomTest(cds, 'male', 'female')
+	return(res)
+if (F) {
 	# Filtering:
 	## RPKM >0.01 in 5% of samples
 
-	expr <- as.matrix(expr)
-	nsamples <- ncol(expr)
+	#expr <- as.matrix(expr)
+	#nsamples <- ncol(expr)
 	#log2expr <- log2(expr+1)	
 
 	# Filter lowly expressed genes
@@ -96,6 +94,25 @@ performDE <- function(expr, phen, filter=T, sv=F) {
 	fit$nsamples <- ncol(log2expr)
 	return(fit)
 }
+}
+
+performGO <- function(et_list) {
+	go.data <- list()
+	for (i in names(et_list)) {
+		tmp <- et_list[[i]]
+		ttable <- topTable(tmp, number=Inf)
+		sig <- topTable(tmp, number=Inf, p.value=0.05)
+		all_genes <- rownames(topTable(tmp, number=Inf))
+		go_in <- as.numeric(all_genes%in%rownames(sig))
+		all_genes <- apply(matrix(all_genes, ncol=1), 1, function (x) {unlist(strsplit(x, '[|]'))[2]})
+		names(go_in) <- all_genes
+		pwf <- nullp(go_in, "hg19", "refGene")
+		GO.wall <- goseq(pwf, "hg19", "refGene", method='Sampling', repcnt=2500)
+		GO.wall$q.value <- p.adjust(GO.wall$over_represented_pvalue,method="fdr")
+		go.data[[i]] <- GO.wall
+	}
+	return(go.data)
+}
 
 library(edgeR)
 # library(limma)
@@ -110,8 +127,8 @@ setwd('/home/t.cri.cczysz/tcga/')
 exp_dir <- "/home/t.cri.cczysz/tcga/mirna_expression"
 phen_dir <- "/home/t.cri.cczysz/tcga/phen"
 
-#cancer <- c("ACC")
-cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC","KICH","KIRC","KIRP","LGG","LIHC","LUAD","LUSC","OV","PAAD","PCPG","PRAD","READ","SARC","SKCM","STAD","TGCT","THCA","THYM","UCEC","UCS","UVM")
+cancer <- c("ACC")
+#cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC","KICH","KIRC","KIRP","LGG","LIHC","LUAD","LUSC","OV","PAAD","PCPG","PRAD","READ","SARC","SKCM","STAD","TGCT","THCA","THYM","UCEC","UCS","UVM")
 
 full_names <- c('Adrenocortical Carcinoma', 
 	'Breast Lobular Carcinoma',
@@ -147,30 +164,6 @@ full_names <- c('Adrenocortical Carcinoma',
 )
 exp_dir <- "/home/t.cri.cczysz/tcga/mirna_expression"
 phen_dir <- "/home/t.cri.cczysz/tcga/phen"
-files <- list.files(paste(exp_dir, i, sep='/'), pattern='*.data.txt')
-
-# Ignore first two header rows and import expression
-# First column gives miRNA_ID
-# Each individual sample has 3 columns: read_count, reads_per_million, cross-mapped
-x <- read.table(paste(exp_dir, i, files[1],sep='/'), header=T, row.names=1, skip=2, sep='\t')
-# Import header only
-y <- read.table(paste(exp_dir, i, files[1],sep='/'), header=F, row.names=1, skip=0, sep='\t', nrows=1)
-y <- unique(as.character(y))
-
-rpm <- data.frame(x[, seq(2, ncol(x), 3)])
-colnames(rpm) <- y
-counts <- data.frame(x[, seq(1, ncol(x), 3)])
-colnames(counts) <- y
-files <- list.files(paste(phen_dir, i, sep='/'), pattern='*.picked.txt')
-phen <- read.table(paste(phen_dir,i,files[1],sep='/'), header=F, row.names=1, skip=0, sep="\t")
-exp_ids <- tolower(apply(matrix(colnames(counts), ncol=1), 1, function(x) {paste(unlist(strsplit(x, split='[-]'))[1:3], collapse='-')}))
-phen_ids <- as.character(t(phen)[,1])
-colnames(counts) <- exp_ids
-unique_exp <- counts[, !(exp_ids%in%exp_ids[duplicated(exp_ids)])]
-
-phens <- t(phen)[phen[1,]%in%colnames(unique_exp),]
-exprs <- unique_exp[, colnames(unique_exp)%in%phens[,1]]
-q()
 
 de_outfile <- '/home/t.cri.cczysz/tcga/mirna_results/de_results.Robj'
 #de_outfile <- '/home/t.cri.cczysz/tcga/de_results_sva.Robj'
@@ -181,7 +174,8 @@ if (!file.exists(de_outfile)) {
 
 	#out <- lapply(cancer, importData)
 	et_list <- lapply(cancer, importData)
-	names(et_list) <- cancer
+	q()
+	#names(et_list) <- cancer
 	#names(out) <- cancer
 
 	#exprs <- lapply(out, function(x) { return(x[[2]]) })
