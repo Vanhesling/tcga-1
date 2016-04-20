@@ -9,6 +9,7 @@
 #PBS -o $HOME/tcga.out
 #PBS -e $HOME/tcga.err
 
-module load R/3.1.0
+module load R/3.2.0
 
+#export TEMPDIR=/home/t.cri.cczysz/tmp
 Rscript /home/t.cri.cczysz/tcga/mirna_tcga.R
