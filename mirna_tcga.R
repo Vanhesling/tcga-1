@@ -29,9 +29,14 @@ importData <- function(i) {
 	phens <- t(phen)[phen[1,]%in%colnames(unique_exp),]
 	exprs <- unique_exp[, colnames(unique_exp)%in%phens[,1]]
 
-	phen <- data.frame(row.names = phens[,1], Sex = phens[,'gender'])
+	phen <- data.frame(row.names = phens[,1], Sex = factor(phens[,'gender']))
+	#print(length(levels(phen$Sex)))
+	#flush.console()
+	#print(length(levels(phen$Sex)))
 	#return(list(phen, exprs))
-	fit <- performDE(exprs, phen)
+	if (length(levels(phen$Sex)) == 2) {
+		fit <- performDE(exprs, phen) 
+	} else { fit <- NULL }
 	return(fit)
 
 }
@@ -118,6 +123,7 @@ performGO <- function(et_list) {
 	return(go.data)
 }
 
+#library(DESeq2)
 if (!require(DESeq2)) {
 	library(BiocInstaller)
 	biocLite('DESeq2')
@@ -125,7 +131,7 @@ if (!require(DESeq2)) {
 }
 #library(edgeR)
 # library(limma)
-library(DESeq2)
+#library(DESeq2)
 library(biomaRt)
 library(ggplot2)
 #library(goseq)
@@ -136,8 +142,8 @@ setwd('/home/t.cri.cczysz/tcga/')
 exp_dir <- "/home/t.cri.cczysz/tcga/mirna_expression"
 phen_dir <- "/home/t.cri.cczysz/tcga/phen"
 
-#cancer <- c("ACC")
-cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC","KICH","KIRC","KIRP","LGG","LIHC","LUAD","LUSC","OV","PAAD","PCPG","PRAD","READ","SARC","SKCM","STAD","TGCT","THCA","THYM","UCEC","UCS","UVM")
+cancer <- c("ACC")
+#cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC","KICH","KIRC","KIRP","LGG","LIHC","LUAD","LUSC","OV","PAAD","PCPG","PRAD","READ","SARC","SKCM","STAD","TGCT","THCA","THYM","UCEC","UCS","UVM")
 
 full_names <- c('Adrenocortical Carcinoma', 
 	'Breast Lobular Carcinoma',
@@ -177,7 +183,7 @@ phen_dir <- "/home/t.cri.cczysz/tcga/phen"
 de_outfile <- '/home/t.cri.cczysz/tcga/mirna_results/de_results.Robj'
 #de_outfile <- '/home/t.cri.cczysz/tcga/de_results_sva.Robj'
 
-if (!file.exists(de_outfile)) {
+if (file.exists(de_outfile)) {
 	#exprs <- list()
 	#phens <- list()
 
@@ -217,7 +223,7 @@ if (!file.exists(de_outfile)) {
 
 # Perform GO enrichment analysis
 #go.data <- list()
-q('no')
+q()
 
 ensembl = useMart("ENSEMBL_MART_ENSEMBL",dataset="hsapiens_gene_ensembl", host="www.ensembl.org")
 cancer_summaries <- c('cancer', 'name', 'sample_size', 'nmale', 'nfemale', 'percentfemale', 'nsva','ngenes', 'nsiggenes', 'malebiased', 'percentmale', 'femalebiased', 'percentfemale')
