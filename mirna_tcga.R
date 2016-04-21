@@ -37,8 +37,8 @@ importData <- function(i) {
 	if (length(levels(phen$Sex)) == 2) {
 		fit <- performDE(exprs, phen) 
 	} else { fit <- NULL }
-	#return(fit)
-	return(list(exprs, phen))
+	return(fit)
+	#return(list(exprs, phen))
 
 }
 
@@ -191,6 +191,7 @@ if (T) {
 
 	#out <- lapply(cancer, importData)
 	et_list <- lapply(cancer, importData)
+	names(et_list) <- cancer
 	#names(et_list) <- cancer
 	#names(out) <- cancer
 
