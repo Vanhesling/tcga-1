@@ -1,5 +1,6 @@
 importData <- function(i) {
 	# Read expression and phenotype values for each cancer type, i, and save to list
+	print(i)
 	exp_dir <- "/home/t.cri.cczysz/tcga/mirna_expression"
 	phen_dir <- "/home/t.cri.cczysz/tcga/phen"
 
@@ -30,14 +31,14 @@ importData <- function(i) {
 	exprs <- unique_exp[, colnames(unique_exp)%in%phens[,1]]
 
 	phen <- data.frame(row.names = phens[,1], Sex = factor(phens[,'gender']))
-	#print(length(levels(phen$Sex)))
-	#flush.console()
-	#print(length(levels(phen$Sex)))
-	#return(list(phen, exprs))
+	# Reorder phen data frame by order of expression matrix
+	phen <- phen[match(colnames(exprs), rownames(phen)),, drop=F]
+	#return(list(exprs, phen))
 	if (length(levels(phen$Sex)) == 2) {
 		fit <- performDE(exprs, phen) 
 	} else { fit <- NULL }
-	return(fit)
+	#return(fit)
+	return(list(exprs, phen))
 
 }
 
@@ -142,7 +143,7 @@ setwd('/home/t.cri.cczysz/tcga/')
 exp_dir <- "/home/t.cri.cczysz/tcga/mirna_expression"
 phen_dir <- "/home/t.cri.cczysz/tcga/phen"
 
-#cancer <- c("ACC")
+#cancer <- c("ESCA")
 cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC","KICH","KIRC","KIRP","LGG","LIHC","LUAD","LUSC","OV","PAAD","PCPG","PRAD","READ","SARC","SKCM","STAD","TGCT","THCA","THYM","UCEC","UCS","UVM")
 
 full_names <- c('Adrenocortical Carcinoma', 
@@ -183,7 +184,8 @@ phen_dir <- "/home/t.cri.cczysz/tcga/phen"
 de_outfile <- '/home/t.cri.cczysz/tcga/mirna_results/de_results.Robj'
 #de_outfile <- '/home/t.cri.cczysz/tcga/de_results_sva.Robj'
 
-if (file.exists(de_outfile)) {
+#if (file.exists(de_outfile)) {
+if (T) {
 	#exprs <- list()
 	#phens <- list()
 
