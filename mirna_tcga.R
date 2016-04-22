@@ -200,44 +200,21 @@ phen_dir <- "/home/t.cri.cczysz/tcga/phen"
 de_outfile <- '/home/t.cri.cczysz/tcga/mirna_results/de_results.Robj'
 #de_outfile <- '/home/t.cri.cczysz/tcga/de_results_sva.Robj'
 
+deseq_list <- NULL
+deseq_res_list <- NULL
 #if (file.exists(de_outfile)) {
 if (T) {
 	#exprs <- list()
 	#phens <- list()
 
 	#out <- lapply(cancer, importData)
-	et_list <- lapply(cancer, importData)
-	names(et_list) <- cancer
-	#names(et_list) <- cancer
-	#names(out) <- cancer
-
-	#exprs <- lapply(out, function(x) { return(x[[2]]) })
-	#names(exprs) <- cancer
-	#phens <- lapply(out, function(x) { return(x[[1]]) })
-	#names(phens) <- cancer
-	#rm(out)
-
-	#et_list <- lapply(cancer, function(x, exprs, phens) {performDE(exprs[[x]], phens[[x]], T, F)})
-	#names(et_list) <- cancer
-	if (F) {
-	for (i in cancer) {
-		out <- importData(i)
-		phens[[i]] <- out[[1]]
-		exprs[[i]] <- out[[2]]
-	}
-
-	et_list <- list()
-	for (i in cancer) {
-		et <- performDE(exprs[[i]], phens[[i]], T, F)
-		et_list[[i]] <- et
-	}
-	}
-
-	#results <- lapply(et_list, topTable, number=Inf)
+	deseq_list <- lapply(cancer, importData)
+	names(deseq_list) <- cancer
 	save(et_list, file=de_outfile)
 
 } else {load(file=de_outfile)}
 
+deseq_res_list <- lapply(deseq_list, results)
 # et_list[[cancer]] gives lmFit objects from lm of gene ~ sex test
 
 # Perform GO enrichment analysis
@@ -245,10 +222,11 @@ if (T) {
 
 pdf('mirna_ma.pdf', width=12, height=10)
 for (i in seq(length(et_list))) {
-	plotMA(et_list[[i]], main=full_names[i])
+	if (!is.null(et_list[[i]])) {plotMA(et_list[[i]], main=full_names[i])}
 }
 dev.off()
 q()
+
 ensembl = useMart("ENSEMBL_MART_ENSEMBL",dataset="hsapiens_gene_ensembl", host="www.ensembl.org")
 cancer_summaries <- c('cancer', 'name', 'sample_size', 'nmale', 'nfemale', 'percentfemale', 'nsva','ngenes', 'nsiggenes', 'malebiased', 'percentmale', 'femalebiased', 'percentfemale')
 
