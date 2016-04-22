@@ -49,6 +49,16 @@ performDE <- function(expr, phen) {
 	expr <- expr[use,]
 
 	dds <- DESeqDataSetFromMatrix(countData = expr, colData = phen, design = ~ Sex)
+
+	# Estimate surrogate variables
+	dat <- counts(dds, normalized=TRUE)
+	mod <- model.matrix(~dat, colData(dds))
+	mod0 <- model.matrix(~1, colData(dds))
+	svseq <- svaseq(dat, mod, mod0)
+	print(str(svseq))
+
+	#ddssva <- dds
+	
 	dds <- DESeq(dds)
 	res <- results(dds)
 	return(res)
@@ -136,15 +146,15 @@ if (!require(DESeq2)) {
 library(biomaRt)
 library(ggplot2)
 #library(goseq)
-#library(sva)
+library(sva)
 
 setwd('/home/t.cri.cczysz/tcga/')
 
 exp_dir <- "/home/t.cri.cczysz/tcga/mirna_expression"
 phen_dir <- "/home/t.cri.cczysz/tcga/phen"
 
-#cancer <- c("ESCA")
-cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC","KICH","KIRC","KIRP","LGG","LIHC","LUAD","LUSC","OV","PAAD","PCPG","PRAD","READ","SARC","SKCM","STAD","TGCT","THCA","THYM","UCEC","UCS","UVM")
+cancer <- c("ACC")
+#cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC","KICH","KIRC","KIRP","LGG","LIHC","LUAD","LUSC","OV","PAAD","PCPG","PRAD","READ","SARC","SKCM","STAD","TGCT","THCA","THYM","UCEC","UCS","UVM")
 
 full_names <- c('Adrenocortical Carcinoma', 
 	'Breast Lobular Carcinoma',
