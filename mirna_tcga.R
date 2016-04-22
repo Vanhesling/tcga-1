@@ -51,16 +51,22 @@ performDE <- function(expr, phen) {
 	dds <- DESeqDataSetFromMatrix(countData = expr, colData = phen, design = ~ Sex)
 
 	# Estimate surrogate variables
+	dds <- estimateSizeFactors(dds)
 	dat <- counts(dds, normalized=TRUE)
-	mod <- model.matrix(~dat, colData(dds))
+	#print(head(dat))
+	mod <- model.matrix(~phen$Sex, colData(dds))
 	mod0 <- model.matrix(~1, colData(dds))
-	svseq <- svaseq(dat, mod, mod0)
-	print(str(svseq))
+	svseq <- svaseq(dat, mod, mod0, n.sv=2)
+	# svseq$sv: matrix of SVs
+	# svseq$n.sv: number of SVs
 
-	#ddssva <- dds
-	
-	dds <- DESeq(dds)
-	res <- results(dds)
+
+	ddssva <- dds
+	ddssva$SV1 <- svseq$sv[,1]
+	ddssva$SV2 <- svseq$sv[,2]
+	design(ddssva) <- ~ SV1 + Sex	
+	ddssva <- DESeq(ddssva)
+	res <- results(ddssva)
 	return(res)
 	#condition <- as.factor(phen$Sex)
 	#cds <- newCountDataSet(expr, condition)	
@@ -153,8 +159,8 @@ setwd('/home/t.cri.cczysz/tcga/')
 exp_dir <- "/home/t.cri.cczysz/tcga/mirna_expression"
 phen_dir <- "/home/t.cri.cczysz/tcga/phen"
 
-cancer <- c("ACC")
-#cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC","KICH","KIRC","KIRP","LGG","LIHC","LUAD","LUSC","OV","PAAD","PCPG","PRAD","READ","SARC","SKCM","STAD","TGCT","THCA","THYM","UCEC","UCS","UVM")
+#cancer <- c("ACC")
+cancer <- c("ACC","BLCA","BRCA","CESC","CHOL","COAD","DLBC","ESCA","GBM","HNSC","KICH","KIRC","KIRP","LGG","LIHC","LUAD","LUSC","OV","PAAD","PCPG","PRAD","READ","SARC","SKCM","STAD","TGCT","THCA","THYM","UCEC","UCS","UVM")
 
 full_names <- c('Adrenocortical Carcinoma', 
 	'Breast Lobular Carcinoma',
@@ -236,8 +242,13 @@ if (T) {
 
 # Perform GO enrichment analysis
 #go.data <- list()
-q()
 
+pdf('mirna_ma.pdf', width=12, height=10)
+for (i in seq(length(et_list))) {
+	plotMA(et_list[[i]], main=full_names[i])
+}
+dev.off()
+q()
 ensembl = useMart("ENSEMBL_MART_ENSEMBL",dataset="hsapiens_gene_ensembl", host="www.ensembl.org")
 cancer_summaries <- c('cancer', 'name', 'sample_size', 'nmale', 'nfemale', 'percentfemale', 'nsva','ngenes', 'nsiggenes', 'malebiased', 'percentmale', 'femalebiased', 'percentfemale')
 
