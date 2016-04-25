@@ -210,7 +210,7 @@ if (T) {
 	#out <- lapply(cancer, importData)
 	deseq_list <- lapply(cancer, importData)
 	names(deseq_list) <- cancer
-	save(et_list, file=de_outfile)
+	save(deseq_list, file=de_outfile)
 
 } else {load(file=de_outfile)}
 
