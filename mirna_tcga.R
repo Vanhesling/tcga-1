@@ -222,11 +222,12 @@ deseq_res_list <- lapply(deseq_list, results)
 
 pdf('mirna_ma.pdf', width=12, height=10)
 for (i in seq(length(et_list))) {
-	if (!is.null(et_list[[i]])) {plotMA(et_list[[i]], main=full_names[i])}
+	if (!is.null(et_list[[i]])) {plotMA(et_list[[i]], main=full_names[i], alpha=0.05)}
 }
 dev.off()
 q()
 
+if (F) {
 ensembl = useMart("ENSEMBL_MART_ENSEMBL",dataset="hsapiens_gene_ensembl", host="www.ensembl.org")
 cancer_summaries <- c('cancer', 'name', 'sample_size', 'nmale', 'nfemale', 'percentfemale', 'nsva','ngenes', 'nsiggenes', 'malebiased', 'percentmale', 'femalebiased', 'percentfemale')
 
@@ -286,5 +287,6 @@ dev.off()
 for (cancer_type in names(out_list)) {
 	f.out <- paste(cancer_type, 'results.csv', sep='.')
 	write.csv(out_list[[cancer_type]], file=f.out, sep=',', row.names=T, col.names=T, quote=F)
+}
 }
 }
