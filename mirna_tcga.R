@@ -37,6 +37,8 @@ importData <- function(i) {
 	if (length(levels(phen$Sex)) == 2) {
 		fit <- performDE(exprs, phen) 
 	} else { fit <- NULL }
+	save(exprs, file=paste(i,'mirna_exprs.Robj', sep='_'))
+	save(phen, file=paste(i,'mirna_phen.Robj', sep='_'))
 	return(fit)
 	#return(list(exprs, phen))
 
